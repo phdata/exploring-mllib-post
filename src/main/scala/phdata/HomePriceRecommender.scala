@@ -2,7 +2,7 @@ package phdata
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{Path, FileSystem}
-import org.apache.spark.mllib.feature.StandardScaler
+import org.apache.spark.mllib.feature.{StandardScalerModel, StandardScaler}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.{LinearRegressionWithSGD, LabeledPoint}
 import org.apache.spark.mllib.stat.Statistics
@@ -25,7 +25,7 @@ object HomePriceRecommender extends Serializable {
     val priceStats = Statistics.colStats(parsed.map(home => Vectors.dense(home.price)))
     println("Price mean: " + priceStats.mean)
     println("Price max: " + priceStats.max)
-    println("Price min: " + priceStats.max)
+    println("Price min: " + priceStats.min)
 
     // filter out anomalous data
     val filtered = parsed.filter(home => (home.price > 100000.0 && home.price < 400000.0 && home.sqFt > 1000.0))
@@ -42,6 +42,9 @@ object HomePriceRecommender extends Serializable {
 
     // Scale features to 0 mean and common variance
     val scaler = new StandardScaler(withMean = true, withStd = true).fit(labelData.map(x => x.features))
+
+    println("Scaler mean: "+ scaler.mean.toArray.mkString(","))
+    println("Scaler variance: "+ scaler.variance.toArray.mkString(","))
 
     val scaledData = labelData.map{ data =>
       LabeledPoint(data.label, scaler.transform(Vectors.dense(data.features.toArray)))
@@ -77,14 +80,21 @@ object HomePriceRecommender extends Serializable {
     println("Mean Square Error: " + MSE)
 
     // persist model to HDFS
+    sc.parallelize(Seq(model), 1).saveAsObjectFile("hdfs:///user/root/linReg.model")
+    sc.parallelize(Seq(scaler), 1).saveAsObjectFile("hdfs:///user/root/scaler.model")
+    //val model = sc.objectFile[StandardScalerModel]("/tmp/model").first()
+    /**
     val conf = new Configuration()
     val fs = FileSystem.get(conf)
     val out = fs.create( new Path("hdfs:///user/root/homeprice.model"))
+    out.writeBytes(scaler.mean.toArray.mkString(","))
+    out.writeBytes(scaler.variance.toArray.mkString(","))
     out.writeBytes(model.intercept.toString)
     out.writeBytes(",")
     out.writeBytes(model.weights.toArray.mkString(","))
     out.close()
     fs.close()
+      **/
   }
 
   // parse home price data into case class
