@@ -82,19 +82,6 @@ object HomePriceRecommender extends Serializable {
     // persist model to HDFS
     sc.parallelize(Seq(model), 1).saveAsObjectFile("hdfs:///user/root/linReg.model")
     sc.parallelize(Seq(scaler), 1).saveAsObjectFile("hdfs:///user/root/scaler.model")
-    //val model = sc.objectFile[StandardScalerModel]("/tmp/model").first()
-    /**
-    val conf = new Configuration()
-    val fs = FileSystem.get(conf)
-    val out = fs.create( new Path("hdfs:///user/root/homeprice.model"))
-    out.writeBytes(scaler.mean.toArray.mkString(","))
-    out.writeBytes(scaler.variance.toArray.mkString(","))
-    out.writeBytes(model.intercept.toString)
-    out.writeBytes(",")
-    out.writeBytes(model.weights.toArray.mkString(","))
-    out.close()
-    fs.close()
-      **/
   }
 
   // parse home price data into case class
